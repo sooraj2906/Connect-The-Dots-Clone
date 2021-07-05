@@ -13,7 +13,7 @@ public class LineController : MonoBehaviour
     private GameObject prevGrid;
     private LineRenderer lr;
     private List<GameObject> currentLine = new List<GameObject>();
-    public List<GameObject> lines = new List<GameObject>();
+    public List<LineRenderer> lines = new List<LineRenderer>();
 
 
     private void Update()
@@ -21,7 +21,7 @@ public class LineController : MonoBehaviour
         //Draw a ray from camera to screen on position of the mosue to get the object that we are clikcing
         var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit2D hit2D = Physics2D.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition).origin, Camera.main.ScreenPointToRay(Input.mousePosition).direction, 100);
-        
+
         if (Input.GetMouseButtonDown(0))
         {
             isDrag = true;
@@ -54,8 +54,8 @@ public class LineController : MonoBehaviour
                     lr.startColor = dot.col;
                     lr.endColor = dot.col;
                 }
+                else if (!dot.isActivated)
                 //Checks if the grid is not activated
-                if (!dot.isActivated)
                 {
                     //Checks if the grid color is the same color as the line renderer or white, so that we can draw over it
                     if (dot.col == lr.startColor || dot.col == Color.white)
@@ -66,25 +66,39 @@ public class LineController : MonoBehaviour
                             //Checks if the grid that we are on is either horizontal or vertical to the previous grid and not diagonal
                             if (hit2D.collider.transform.position.x == prevGrid.transform.position.x || hit2D.collider.transform.position.y == prevGrid.transform.position.y)
                             {
+                                if (lr.GetPosition(lr.positionCount - 1) == hit2D.collider.transform.position)
+                                {
+                                    lr.positionCount -= 1;
+                                }
+                                else
+                                {
+                                    //Adds the current grid position to the line renderer and set the current grid as previous grid
+                                    dot.isActivated = true;
+                                    lr.positionCount = i + 1;
+                                    lr.SetPosition(i, hit2D.collider.transform.position);
+                                    hit2D.collider.enabled = false;
+                                    currentLine.Add(hit2D.collider.gameObject);
+                                    i++;
+                                    prevGrid = hit2D.collider.gameObject;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (lr.GetPosition(lr.positionCount) == hit2D.collider.transform.position)
+                            {
+                                lr.positionCount -= 1;
+                            }
+                            else
+                            {
                                 //Adds the current grid position to the line renderer and set the current grid as previous grid
                                 dot.isActivated = true;
-                                lr.positionCount = i + 1;
                                 lr.SetPosition(i, hit2D.collider.transform.position);
                                 hit2D.collider.enabled = false;
                                 currentLine.Add(hit2D.collider.gameObject);
                                 i++;
                                 prevGrid = hit2D.collider.gameObject;
                             }
-                        }
-                        else
-                        {
-                            //Adds the current grid position to the line renderer and set the current grid as previous grid
-                            dot.isActivated = true;
-                            lr.SetPosition(i, hit2D.collider.transform.position);
-                            hit2D.collider.enabled = false;
-                            currentLine.Add(hit2D.collider.gameObject);
-                            i++;
-                            prevGrid = hit2D.collider.gameObject;
                         }
                     }
                 }
@@ -93,6 +107,7 @@ public class LineController : MonoBehaviour
                     //Check if the current grid is not the previous grid and if the current grid is not the ending grid
                     if (hit2D.collider.gameObject != prevGrid && !hit2D.collider.GetComponent<DotController>().isEnd)
                         GameManager.pInstance.game.GameOver();
+
                 }
             }
         }
@@ -119,7 +134,7 @@ public class LineController : MonoBehaviour
             }
             else
             {
-                lines.Add(lr.gameObject);
+                lines.Add(lr);
             }
 
             isDrag = false;
@@ -132,7 +147,7 @@ public class LineController : MonoBehaviour
     //Resets the current level so that the user can start over
     public void ResetLevel()
     {
-        foreach (GameObject g in lines.ToArray())
+        foreach (LineRenderer g in lines.ToArray())
         {
             Destroy(g);
             lines.Remove(g);
@@ -154,4 +169,5 @@ public class LineController : MonoBehaviour
     {
         return lines.Count;
     }
+
 }
